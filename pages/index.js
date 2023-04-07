@@ -1,3 +1,4 @@
+import { MongoClient } from 'mongodb'; // This will only be executed on the server side, it will not be included in the client side bundle
 import MeetupList from '@/components/meetups/MeetupList';
 import { useState, useEffect } from 'react';
 
@@ -48,9 +49,25 @@ const HomePage = (props) => {
 export async function getStaticProps() {
   //fetch data from an api
   //You always need a return object and you need the props property as shown below
+
+  //We don't need to send a request to our own API because we are using the same server
+  const client = await MongoClient.connect(process.env.MONGO_URL);
+  const db = client.db();
+
+  const meetupsCollection = db.collection('meetups');
+
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
+
   return {
     props: {
-      meetups: DUMMY_MEETUPS,
+      meetups: meetups.map((meetup) => ({
+        title: meetup.title,
+        address: meetup.address,
+        image: meetup.image,
+        id: meetup._id.toString(),
+      })),
     },
     revalidate: 10, //*** IMPORTANT *** This will help with changing/updating data (now you don't have to rebuid and redeploy)
     // -THis page is set to update at 10 seconds -But what if we want to do it dynamically (on request)
